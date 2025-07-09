@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PC Health Monitor</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+</head>
+<body>
+    <header>
+        <h1>🖥️ PC Health Dashboard</h1>
+        <p>Welcome! You are using: <strong>{{ hostname }}</strong></p>
+    </header>
+
+    <nav>
+        <select onchange="fetchStatus()">
+            <option selected disabled>Choose PC Profile</option>
+            <option>Home Use</option>
+            <option>Workstation</option>
+            <option>Gaming</option>
+            <option>Battery Saver</option>
+        </select>
+        <button onclick="fetchStatus()">🔄 Refresh</button>
+    </nav>
+
+    <main id="result" class="dashboard">
+        <p>Loading health data...</p>
+    </main>
+
+    <footer>
+        <p>Made with ❤️ by ChatGPT</p>
+    </footer>
+
+    <script>
+        async function fetchStatus() {
+            const res = await fetch("/status");
+            const data = await res.json();
+
+            document.getElementById("result").innerHTML = `
+                <div class="box"><i class="fas fa-battery-three-quarters icon"></i> <strong>Battery:</strong> ${data.battery.percent}% (${data.battery.plugged ? "Charging" : "Not Charging"})</div>
+                <div class="box"><i class="fas fa-wifi icon"></i> <strong>Wi-Fi:</strong> ${data.wifi}</div>
+                <div class="box"><i class="fas fa-bluetooth-b icon"></i> <strong>Bluetooth:</strong> ${data.bluetooth}</div>
+                <div class="box"><i class="fas fa-globe icon"></i> <strong>Internet:</strong> ${data.internet}</div>
+                <div class="box"><i class="fas fa-microchip icon"></i> <strong>CPU Usage:</strong> ${data.cpu_usage}%</div>
+                <div class="box"><i class="fas fa-memory icon"></i> <strong>Memory Usage:</strong> ${data.memory}%</div>
+            `;
+        }
+
+        fetchStatus();
+    </script>
+</body>
+</html>
