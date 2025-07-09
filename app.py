@@ -1,58 +1,46 @@
-from flask import Flask, render_template, jsonify
+from flask import Flask, render_template
 import psutil
-import subprocess
 import platform
 import socket
-from ping3 import ping
+import subprocess
 
 app = Flask(__name__)
 
+def get_bluetooth_status():
+    try:
+        if platform.system() == "Windows":
+            # Triple quotes used to avoid syntax errors
+            command = '''powershell "Get-PnpDevice -Class Bluetooth | Where-Object { $_.Status -eq 'OK' }"'''
+            result = subprocess.check_output(command, shell=True)
+            return "Enabled" if result else "Disabled"
+        else:
+            return "Not Supported"
+    except Exception as e:
+        return f"Error: {e}"
+
 @app.route("/")
 def home():
-    return render_template("index.html")
-
-@app.route("/status")
-def status():
     battery = psutil.sensors_battery()
-    battery_status = {
-        "percent": battery.percent if battery else "N/A",
-        "plugged": battery.power_plugged if battery else "N/A"
-    }
+    battery_percent = battery.percent if battery else "N/A"
+    plugged = battery.power_plugged if battery else "N/A"
 
-    if platform.system() == "Windows":
-        try:
-            wifi_result = subprocess.check_output("netsh wlan show interfaces", shell=True).decode()
-            wifi_connected = "connected" in wifi_result.lower()
-        except:
-            wifi_connected = False
+    cpu_usage = psutil.cpu_percent(interval=1)
+    memory = psutil.virtual_memory()
+    memory_usage = memory.percent
 
-        try:
-            bt_result = subprocess.check_output(
-                'powershell "Get-PnpDevice -Class Bluetooth | Where-Object { $_.Status -eq 'OK' }"',
-                shell=True
-            ).decode()
-            bt_connected = "OK" in bt_result
-        except:
-            bt_connected = False
-    else:
-        wifi_connected = "Unsupported"
-        bt_connected = "Unsupported"
+    hostname = socket.gethostname()
+    ip_address = socket.gethostbyname(hostname)
 
-    try:
-        ping_result = ping("google.com", timeout=2)
-        ping_status = "Online" if ping_result else "Offline"
-    except:
-        ping_status = "Offline"
+    bluetooth_status = get_bluetooth_status()
 
-    return jsonify({
-        "battery": battery_status,
-        "wifi": wifi_connected,
-        "bluetooth": bt_connected,
-        "internet": ping_status,
-        "cpu_usage": psutil.cpu_percent(),
-        "memory": psutil.virtual_memory().percent,
-        "hostname": socket.gethostname()
-    })
+    return render_template("index.html",
+                           battery_percent=battery_percent,
+                           plugged=plugged,
+                           cpu_usage=cpu_usage,
+                           memory_usage=memory_usage,
+                           hostname=hostname,
+                           ip_address=ip_address,
+                           bluetooth_status=bluetooth_status)
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000)
+    app.run(host='0.0.0.0', port=10000)
